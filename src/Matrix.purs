@@ -92,7 +92,7 @@ identityM = Matrix cols
 
 zeroM :: forall m n a. Nat m => Nat n => Semiring a => Matrix m n a
 zeroM = Matrix (Array.replicate ncols (Array.replicate nrows zero))
-  where            
+  where
   nrows = toInt (undefined :: m)
   ncols = toInt (undefined :: n)
 
@@ -106,9 +106,10 @@ instance ringMatrix :: (Nat n, Ring a) => Ring (Matrix n n a) where
   sub a b = add a (map negate b)
 
 prettyPrint :: forall m n a. Show a => Matrix m n a -> String
-prettyPrint m =
+prettyPrint a =
   let
-    cols = toColumnArray m
+    cols = toColumnArray a
+    nrows = fromMaybe 0 (map Array.length (Array.head cols))
 
     formatCol :: Array a -> Array String
     formatCol col =
@@ -120,13 +121,26 @@ prettyPrint m =
       in
         map (leftPad width) shown
 
-    joinFormattedCols :: Array (Array String) -> String
+    joinFormattedCols :: Array (Array String) -> Array String
     joinFormattedCols =
       transposeArray
       >>> map (String.joinWith " ")
-      >>> String.joinWith "\n"
+
+    lines = joinFormattedCols (map formatCol cols)
+
+    surround :: Int -> String -> String
+    surround i l
+      | i == 0         = "/ " <> l <> " \\"
+      | i == nrows - 1 = "\\ " <> l <> " /"
+      | otherwise      = "| " <> l <> " |"
   in
-    joinFormattedCols (map formatCol cols)
+    case lines of
+      [] ->
+        "< >"
+      [l] ->
+        "< " <> l <> " >"
+      _ ->
+        String.joinWith "\n" (Array.mapWithIndex surround lines)
 
 leftPad :: Int -> String -> String
 leftPad width str =
