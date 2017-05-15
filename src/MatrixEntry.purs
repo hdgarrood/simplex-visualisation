@@ -5,15 +5,17 @@ module MatrixEntry
   ) where
 
 import Prelude
-import Data.Traversable (for)
+import Data.Traversable (traverse)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Array as Array
+import Data.Int as Int
+import Data.Number as Number
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 
-import Matrix (makeMatrix, prettyPrint)
+import Matrix (makeMatrix, prettyPrint, gaussEliminate)
 
 type State =
   { entries :: Array (Array String)
@@ -49,13 +51,14 @@ initialState =
   , cols: 3
   }
 
+parseEntries :: Array (Array String) -> Maybe (Array (Array Number))
+parseEntries = traverse (traverse Number.fromString)
+
 render :: State -> H.ComponentHTML Query
 render state =
   HH.div []
     [ HH.div [] (map renderRow (Array.range 0 (state.rows - 1)))
-    , HH.pre_ [ HH.text (fromMaybe "(no matrix)"
-                                   (makeMatrix prettyPrint state.entries))
-              ] 
+    , HH.pre_ [ HH.text (debugMsg state) ]
     ]
 
   where
@@ -64,10 +67,15 @@ render state =
 
   renderInput i j =
     HH.input
-      [ HP.type_ HP.InputNumber
-      , HP.value (fromMaybe "" (Array.index state.entries j >>= flip Array.index i))
+      [ HP.value (fromMaybe "" (Array.index state.entries j >>= flip Array.index i))
       , HE.onValueChange (HE.input (Update i j))
       ]
+
+  debugMsg state =
+    fromMaybe "(no matrix)" $
+      parseEntries state.entries >>= makeMatrix \m ->
+        prettyPrint m <> "\n\nRow echelon form:\n\n" <> prettyPrint (gaussEliminate m)
+
 
 eval :: forall m. Query ~> H.ComponentDSL State Query Void m
 eval = case _ of

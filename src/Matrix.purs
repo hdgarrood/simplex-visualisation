@@ -7,6 +7,7 @@ module Matrix
   , matrixAdd, (.+)
   , dot
   , transpose
+  , gaussEliminate
   , prettyPrint
   ) where
 
@@ -14,7 +15,7 @@ import Prelude
 import Data.Foldable (sum, maximum, all)
 import Data.String as String
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Typelevel.Num (class Nat, toInt, reifyInt)
+import Data.Typelevel.Num (class Nat, toInt, reifyInt, D1)
 import Data.Typelevel.Undefined (undefined)
 -- import Type.Equality (class TypeEquals)
 import Data.Enum (enumFromTo)
@@ -23,6 +24,8 @@ import Partial.Unsafe (unsafePartial)
 
 -- | A Matrix with m rows and n columns. Stored as an array of columns.
 newtype Matrix m n a = Matrix (Array (Array a))
+
+type Vector n = Matrix n D1
 
 derive newtype instance eqMatrix :: Eq a => Eq (Matrix m n a)
 
@@ -171,3 +174,29 @@ leftPad width str =
 
 instance showMatrix :: Show a => Show (Matrix m n a) where
   show = prettyPrint
+
+foreign import linearSolve :: forall n.
+  Nat n =>
+  Matrix n n Number ->
+  Vector n Number ->
+  Vector n Number
+
+-- TODO: seems broken
+gaussEliminate :: forall m n.
+  Nat m =>
+  Nat n =>
+  Matrix m n Number ->
+  Matrix m n Number
+gaussEliminate =
+  unsafeMatrix _m _n <<< gaussEliminateImpl nrows ncols <<< toColumnArray
+  where
+  _m = undefined :: m
+  _n = undefined :: n
+  nrows = toInt _m
+  ncols = toInt _n
+
+foreign import gaussEliminateImpl ::
+  Int ->
+  Int ->
+  Array (Array Number) ->
+  Array (Array Number)
