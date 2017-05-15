@@ -1,6 +1,7 @@
 module Matrix
   ( Matrix
   , unsafeMatrix
+  , makeMatrix
   , toColumnArray
   , matrixMultiply, (.*)
   , matrixAdd, (.+)
@@ -10,10 +11,10 @@ module Matrix
   ) where
 
 import Prelude
-import Data.Foldable (sum, maximum)
+import Data.Foldable (sum, maximum, all)
 import Data.String as String
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Typelevel.Num (class Nat, toInt)
+import Data.Typelevel.Num (class Nat, toInt, reifyInt)
 import Data.Typelevel.Undefined (undefined)
 -- import Type.Equality (class TypeEquals)
 import Data.Enum (enumFromTo)
@@ -28,9 +29,26 @@ derive newtype instance eqMatrix :: Eq a => Eq (Matrix m n a)
 instance functorMatrix :: Functor (Matrix m n) where
   map f (Matrix xss) = Matrix (map (map f) xss)
 
--- | Construct a matrix without dimensions checking.
-unsafeMatrix :: forall m n a. Array (Array a) -> Matrix m n a
-unsafeMatrix = Matrix
+-- | Construct a matrix from an array of columns, without dimensions
+-- | checking.
+unsafeMatrix :: forall m n a. m -> n -> Array (Array a) -> Matrix m n a
+unsafeMatrix _ _ = Matrix
+
+-- | Construct a matrix from an array of columns, with dimensions checking.
+makeMatrix :: forall a r.
+  (forall m n. Nat m => Nat n => Matrix m n a -> r) ->
+  Array (Array a) ->
+  Maybe r
+makeMatrix go cols =
+  let
+    ncols = Array.length cols
+    nrows = fromMaybe 0 (map Array.length (Array.head cols))
+
+    rowsMatch = all (eq nrows <<< Array.length) cols
+  in
+    if rowsMatch
+      then Just (reifyInt nrows \m -> reifyInt ncols \n -> go (unsafeMatrix m n cols))
+      else Nothing
 
 -- | O(1). Convert a matrix to an array of columns.
 toColumnArray :: forall m n a. Matrix m n a -> Array (Array a)
