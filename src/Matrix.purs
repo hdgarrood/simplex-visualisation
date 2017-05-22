@@ -43,7 +43,7 @@ makeMatrix :: forall a r.
   (forall m n. Nat m => Nat n => Matrix m n a -> r) ->
   Array (Array a) ->
   Maybe r
-makeMatrix go rows =
+makeMatrix f rows =
   let
     nrows = Array.length rows
     ncols = fromMaybe 0 (map Array.length (Array.head rows))
@@ -51,7 +51,7 @@ makeMatrix go rows =
     colsMatch = all (eq ncols <<< Array.length) rows
   in
     if colsMatch
-      then Just (reifyInt nrows \m -> reifyInt ncols \n -> go (unsafeMatrix m n rows))
+      then Just (reifyInt nrows \m -> reifyInt ncols \n -> f (unsafeMatrix m n rows))
       else Nothing
 
 -- | O(1). Convert a matrix to an array of rows.
