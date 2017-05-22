@@ -1,7 +1,7 @@
-module MatrixEntry
+module LPEntry
   ( State
   , Query(..)
-  , matrixEntry
+  , lpEntry
   ) where
 
 import Prelude
@@ -15,6 +15,12 @@ import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 
 import Matrix (makeMatrix, prettyPrint)
+
+-- type State =
+--   { costs :: Array String
+--   , coefficients :: Array (Array String)
+--   , bounds :: Array String
+--   }
 
 type State = Array (Array String)
 
@@ -31,8 +37,8 @@ data Query a
   | RemoveRow a
   -- | AddColumn a
 
-matrixEntry :: forall m. H.Component HH.HTML Query Unit Void m
-matrixEntry =
+lpEntry :: forall m. H.Component HH.HTML Query Unit Void m
+lpEntry =
   H.component
     { initialState: const initialState
     , render

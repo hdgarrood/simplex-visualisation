@@ -1,7 +1,7 @@
 module Test.Main where
 
 import Prelude
-import Data.Typelevel.Num (class Nat, toInt, D5, D11)
+import Data.Typelevel.Num (class Nat, toInt, D5, D11, d5)
 import Data.ModularArithmetic (Z, mkZ)
 import Test.QuickCheck
 import Test.QuickCheck.Gen (vectorOf)
@@ -23,9 +23,10 @@ derive newtype instance eqM :: Eq M
 derive newtype instance showM :: Show M
 
 instance arbitraryM :: Arbitrary M where
-  arbitrary = map (M <<< unsafeMatrix) (vectorOf 5 (vectorOf 5 arbitrary))
+  arbitrary = map (M <<< unsafeMatrix d5 d5) (vectorOf 5 (vectorOf 5 arbitrary))
 
 main :: Eff _ Unit
 main = do
   let prx = Proxy :: Proxy M
   checkSemiring prx
+  checkRing prx
