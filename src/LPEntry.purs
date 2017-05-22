@@ -46,9 +46,10 @@ data Query a
   = UpdateCoefficient Int Int String a
   | UpdateCost Int String a
   | UpdateBound Int String a
-  -- | AddConstraint a
-  -- | RemoveConstraint a
-  -- | AddColumn a
+  | AddConstraint a
+  | RemoveConstraint a
+  | AddVariable a
+  | RemoveVariable a
 
 lpEntry :: forall m. H.Component HH.HTML Query Unit Void m
 lpEntry =
@@ -95,7 +96,7 @@ parseEntries = traverse (traverse Number.fromString)
 
 render :: State -> H.ComponentHTML Query
 render state =
-  HH.div_ [ mainDiv, debug ]
+  HH.div_ [ mainDiv, buttons, debug ]
   where
   mainDiv = HH.div [ HP.class_ (H.ClassName "lp-input") ]
                    [ objFun, subjectTo, constraints ]
@@ -142,6 +143,24 @@ render state =
 
   fixedText' msg = fixedText [ HH.text msg ]
 
+  buttons = HH.div_
+    let
+      button label action enabled =
+        HH.button
+          [ HP.title label
+          , HP.enabled enabled
+          , HE.onClick (HE.input_ action)
+          ]
+          [ HH.text label ]
+    in
+      [ HH.div_ [ button "Add constraint" AddConstraint (mayAddConstraint state)
+                , button "Remove constraint" RemoveConstraint (mayRemoveConstraint state)
+                ]
+      , HH.div_ [ button "Add variable" AddVariable (mayAddVariable state)
+                , button "Remove variable" RemoveVariable (mayRemoveVariable state)
+                ]
+      ]
+
   debug = HH.div_ [ HH.pre_ [ HH.text debugMsg ] ]
   debugMsg = dimensionInfo <> "\n\n" <> matrixInfo <>
              "\n\ncosts = " <> show state.costs <>
@@ -161,18 +180,44 @@ intersperse x = intercalate [x] <<< map pure
 eval :: forall m. Query ~> H.ComponentDSL State Query Void m
 eval = case _ of
   UpdateCoefficient i j val next ->
-    modify (over coeffs (updateEntry i j val)) next
+    modify next (over coeffs (updateEntry i j val))
   UpdateCost i val next ->
-    modify (over costs (updateAt_ i val)) next
+    modify next (over costs (updateAt_ i val))
   UpdateBound i val next ->
-    modify (over bounds (updateAt_ i val)) next
+    modify next (over bounds (updateAt_ i val))
+  AddConstraint next ->
+    modifyGuarding mayAddConstraint next $
+      \s -> s { coefficients = Array.snoc s.coefficients (Array.replicate (numVariables s) "0")
+              , bounds = Array.snoc s.bounds "0"
+              }
+  RemoveConstraint next ->
+    modifyGuarding mayRemoveConstraint next $
+      \s -> s { coefficients = dropEnd 1 s.coefficients
+              , bounds = dropEnd 1 s.bounds
+              }
+  AddVariable next ->
+    modifyGuarding mayAddVariable next $
+      \s -> s { coefficients = map (flip Array.snoc "0") s.coefficients
+              , costs = Array.snoc s.costs "0"
+              }
+  RemoveVariable next ->
+    modifyGuarding mayRemoveVariable next
+      \s -> s { coefficients = map (dropEnd 1) s.coefficients
+              , costs = dropEnd 1 s.costs
+              }
   where
-  modify f next = do
+  modifyGuarding check next f = do
     state <- H.get
-    let nextState = f state
-    H.put nextState
+    when (check state) do
+      let nextState = f state
+      H.put nextState
     pure next
+
+  modify = modifyGuarding (const true)
 
   coeffs = prop (SProxy :: SProxy "coefficients")
   costs = prop (SProxy :: SProxy "costs")
   bounds = prop (SProxy :: SProxy "bounds")
+
+dropEnd :: forall a. Int -> Array a -> Array a
+dropEnd i = Array.reverse <<< Array.drop i <<< Array.reverse
