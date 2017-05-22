@@ -5,10 +5,11 @@ var mathjs = require("mathjs")
 function argmax(from, to, f) {
   var state = [from, f(from)]
   var r
+  var f_i
   for (var i = from+1; i < to; i++) {
     f_i = f(i)
     if (f_i >= state[1]) {
-      result = [i, f_i]
+      state = [i, f_i]
     }
   }
   return state[0]
@@ -29,37 +30,40 @@ function swapRows(mat, i, j) {
 // matrices are represented.
 //
 // TODO: this seems broken
-exports.gaussEliminateImpl = function(m) {
-  return function(n) {
-    return function(a1) {
-      // See https://en.wikipedia.org/wiki/Gaussian_elimination#Pseudocode
-      var a = a1.map(function(col) { return col.slice() }).slice()
-
-      var iterations = Math.min(m, n)
-
-      for (var k = 0; k < iterations; k++) {
-        var i_max = argmax(k, m, function(i) { return Math.abs(a1[k][i]) })
-        if (a1[k][i_max] === 0) {
-          // matrix is singular
-          return null
-        }
-        swapRows(a1, k, i_max)
-        
-        for (var i = k+1; i < m; i++) {
-          var f = a1[k][i] / a1[k][k]
-
-          for (var j = k+1; j < n; j++) {
-            a1[j][i] = a1[j][i] - a1[j][k] * f
-          }
-
-          a1[k][i] = 0
-        }
-      }
-
-      return a1
-    }
-  }
-}
+// exports.gaussEliminateImpl = function(m) {
+//   return function(n) {
+//     return function(a1) {
+//       // See https://en.wikipedia.org/wiki/Gaussian_elimination#Pseudocode
+//       var a = a1.map(function(col) { return col.slice() }).slice()
+// 
+//       var iterations = Math.min(m, n)
+// 
+//       for (var k = 0; k < iterations; k++) {
+//         var i_max = argmax(k, m, function(i) { return Math.abs(a1[k][i]) })
+//         if (i_max === null) {
+//           throw new Error("i_max should not be null")
+//         }
+//         if (a1[k][i_max] === 0) {
+//           // matrix is singular
+//           return null
+//         }
+//         swapRows(a1, k, i_max)
+//         
+//         for (var i = k+1; i < m; i++) {
+//           var f = a1[k][i] / a1[k][k]
+// 
+//           for (var j = k+1; j < n; j++) {
+//             a1[j][i] = a1[j][i] - a1[j][k] * f
+//           }
+// 
+//           a1[k][i] = 0
+//         }
+//       }
+// 
+//       return a1
+//     }
+//   }
+// }
 
 exports.linearSolve = function(dictNat) {
   return function(mat) {

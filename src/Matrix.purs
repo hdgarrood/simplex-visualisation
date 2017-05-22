@@ -1,5 +1,6 @@
 module Matrix
   ( Matrix
+  , Vector
   , unsafeMatrix
   , makeMatrix
   , toColumnArray
@@ -7,7 +8,6 @@ module Matrix
   , matrixAdd, (.+)
   , dot
   , transpose
-  , gaussEliminate
   , prettyPrint
   ) where
 
@@ -22,7 +22,8 @@ import Data.Enum (enumFromTo)
 import Data.Array as Array
 import Partial.Unsafe (unsafePartial)
 
--- | A Matrix with m rows and n columns. Stored as an array of columns.
+-- | A Matrix with m rows and n columns. Stored as an array of rows (to match
+-- | with mathjs).
 newtype Matrix m n a = Matrix (Array (Array a))
 
 type Vector n = Matrix n D1
@@ -32,7 +33,7 @@ derive newtype instance eqMatrix :: Eq a => Eq (Matrix m n a)
 instance functorMatrix :: Functor (Matrix m n) where
   map f (Matrix xss) = Matrix (map (map f) xss)
 
--- | Construct a matrix from an array of columns, without dimensions
+-- | Construct a matrix from an array of rows, without dimensions
 -- | checking.
 unsafeMatrix :: forall m n a. m -> n -> Array (Array a) -> Matrix m n a
 unsafeMatrix _ _ = Matrix
@@ -42,24 +43,24 @@ makeMatrix :: forall a r.
   (forall m n. Nat m => Nat n => Matrix m n a -> r) ->
   Array (Array a) ->
   Maybe r
-makeMatrix go cols =
+makeMatrix go rows =
   let
-    ncols = Array.length cols
-    nrows = fromMaybe 0 (map Array.length (Array.head cols))
+    nrows = Array.length rows
+    ncols = fromMaybe 0 (map Array.length (Array.head rows))
 
-    rowsMatch = all (eq nrows <<< Array.length) cols
+    colsMatch = all (eq ncols <<< Array.length) rows
   in
-    if rowsMatch
-      then Just (reifyInt nrows \m -> reifyInt ncols \n -> go (unsafeMatrix m n cols))
+    if colsMatch
+      then Just (reifyInt nrows \m -> reifyInt ncols \n -> go (unsafeMatrix m n rows))
       else Nothing
 
--- | O(1). Convert a matrix to an array of columns.
-toColumnArray :: forall m n a. Matrix m n a -> Array (Array a)
-toColumnArray (Matrix xss) = xss
-
--- | something like O(n). Convert a matrix to an array of rows.
+-- | O(1). Convert a matrix to an array of rows.
 toRowArray :: forall m n a. Matrix m n a -> Array (Array a)
-toRowArray = toColumnArray <<< transpose
+toRowArray (Matrix xss) = xss
+
+-- | kinda expensive. Convert a matrix to an array of columns.
+toColumnArray :: forall m n a. Matrix m n a -> Array (Array a)
+toColumnArray = toRowArray <<< transpose
 
 dot :: forall a. Semiring a => Array a -> Array a -> a
 dot x y = sum (Array.zipWith (*) x y)
@@ -97,7 +98,7 @@ matrixMultiply a b =
     aRows = toRowArray a
     bCols = toColumnArray b
   in
-    Matrix (map (\col -> map (dot col) aRows) bCols)
+    Matrix (transposeArray (map (\col -> map (dot col) aRows) bCols))
 
 infixl 7 matrixMultiply as .*
 
@@ -112,7 +113,7 @@ identityM = Matrix cols
     <> Array.replicate (size - i) zero
 
 zeroM :: forall m n a. Nat m => Nat n => Semiring a => Matrix m n a
-zeroM = Matrix (Array.replicate ncols (Array.replicate nrows zero))
+zeroM = Matrix (Array.replicate nrows (Array.replicate ncols zero))
   where
   nrows = toInt (undefined :: m)
   ncols = toInt (undefined :: n)
@@ -180,23 +181,3 @@ foreign import linearSolve :: forall n.
   Matrix n n Number ->
   Vector n Number ->
   Vector n Number
-
--- TODO: seems broken
-gaussEliminate :: forall m n.
-  Nat m =>
-  Nat n =>
-  Matrix m n Number ->
-  Matrix m n Number
-gaussEliminate =
-  unsafeMatrix _m _n <<< gaussEliminateImpl nrows ncols <<< toColumnArray
-  where
-  _m = undefined :: m
-  _n = undefined :: n
-  nrows = toInt _m
-  ncols = toInt _n
-
-foreign import gaussEliminateImpl ::
-  Int ->
-  Int ->
-  Array (Array Number) ->
-  Array (Array Number)
