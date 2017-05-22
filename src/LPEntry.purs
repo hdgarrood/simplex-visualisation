@@ -36,10 +36,10 @@ modifyAt_ idx f arr = fromMaybe arr (Array.modifyAt idx f arr)
 updateAt_ :: forall a. Int -> a -> Array a -> Array a
 updateAt_ idx x arr = fromMaybe arr (Array.updateAt idx x arr)
 
-getEntry1 :: forall a. Array String -> Int -> String
+getEntry1 :: Array String -> Int -> String
 getEntry1 arr i = fromMaybe "0" (Array.index arr i)
 
-getEntry2 :: forall a. Array (Array String) -> Int -> Int -> String
+getEntry2 :: Array (Array String) -> Int -> Int -> String
 getEntry2 arr i j = fromMaybe "0" (Array.index arr i >>= flip Array.index j)
 
 data Query a
@@ -143,7 +143,9 @@ render state =
   fixedText' msg = fixedText [ HH.text msg ]
 
   debug = HH.div_ [ HH.pre_ [ HH.text debugMsg ] ]
-  debugMsg = dimensionInfo <> "\n\n" <> matrixInfo
+  debugMsg = dimensionInfo <> "\n\n" <> matrixInfo <>
+             "\n\ncosts = " <> show state.costs <>
+             "\n\nbounds = " <> show state.bounds
     
   dimensionInfo =
     "Problem has " <> show (numVariables state) <> " variables and "
@@ -160,10 +162,10 @@ eval :: forall m. Query ~> H.ComponentDSL State Query Void m
 eval = case _ of
   UpdateCoefficient i j val next ->
     modify (over coeffs (updateEntry i j val)) next
-  UpdateCost _ _ next ->
-    pure next
-  UpdateBound _ _ next ->
-    pure next
+  UpdateCost i val next ->
+    modify (over costs (updateAt_ i val)) next
+  UpdateBound i val next ->
+    modify (over bounds (updateAt_ i val)) next
   where
   modify f next = do
     state <- H.get
@@ -172,3 +174,5 @@ eval = case _ of
     pure next
 
   coeffs = prop (SProxy :: SProxy "coefficients")
+  costs = prop (SProxy :: SProxy "costs")
+  bounds = prop (SProxy :: SProxy "bounds")
