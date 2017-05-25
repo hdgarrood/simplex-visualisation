@@ -8,6 +8,7 @@ import Prelude
 import Data.Foldable (intercalate)
 import Data.Traversable (traverse)
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.String as String
 import Data.Array as Array
 import Data.Number as Number
 import Data.Lens (over)
@@ -99,7 +100,13 @@ render state =
   HH.div_ [ mainDiv, buttons, debug ]
   where
   mainDiv = HH.div [ HP.class_ (H.ClassName "lp-input") ]
-                   [ objFun, subjectTo, constraints ]
+                   [ objFun
+                   , subjectTo
+                   , HH.div [ HP.class_ (H.ClassName "lp-input--constraints") ]
+                      [ constraints
+                      , geqZero
+                      ]
+                   ]
 
   objFun = rowDiv ([ fixedText' "maximise f =" ] <> costs)
 
@@ -125,6 +132,16 @@ render state =
                )
     in
       HH.div_ (map makeRow (Array.range 0 (numConstraints state - 1)))
+
+  geqZero =
+    rowDiv [ HH.span [ HP.class_ (H.ClassName "fixed-text") ]
+              [ HH.text "x"
+              , HH.sub_ [ HH.text "i" ]
+              , HH.text (" ≥ 0, for all i ∈ {" <>
+                  (String.joinWith ", " (map show (Array.range 1 (numVariables state)))) <>
+                  "}")
+              ]
+           ]
 
   rowDiv = HH.div [ HP.class_ (H.ClassName "lp-input--row") ]
 
