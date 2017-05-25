@@ -82,7 +82,6 @@ render state =
         ]
     , HH.div [ HP.class_ (H.ClassName "modify-rows") ]
              [ addRowButton, removeRowButton ] 
-    , HH.pre_ [ HH.text debugMsg ]
     ]
 
   where
@@ -106,15 +105,6 @@ render state =
 
   addRowButton = modifyDimsButton mayAddRow AddRow "▼"
   removeRowButton = modifyDimsButton mayRemoveRow RemoveRow "▲"
-
-  debugMsg = dimensionInfo <> "\n\n" <> matrixInfo
-    
-  dimensionInfo =
-    "Matrix is " <> show (numRows state) <> " by " <> show (numCols state)
-
-  matrixInfo =
-    fromMaybe "(no matrix)" $
-      parseEntries state >>= makeMatrix prettyPrint
 
 eval :: forall m. Query ~> H.ComponentDSL State Query Void m
 eval = case _ of

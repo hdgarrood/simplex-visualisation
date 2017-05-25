@@ -97,7 +97,7 @@ parseEntries = traverse (traverse Number.fromString)
 
 render :: State -> H.ComponentHTML Query
 render state =
-  HH.div_ [ mainDiv, buttons, debug ]
+  HH.div_ [ mainDiv, buttons ]
   where
   mainDiv = HH.div [ HP.class_ (H.ClassName "lp-input") ]
                    [ objFun
@@ -177,19 +177,6 @@ render state =
                 , button "Remove variable" RemoveVariable (mayRemoveVariable state)
                 ]
       ]
-
-  debug = HH.div_ [ HH.pre_ [ HH.text debugMsg ] ]
-  debugMsg = dimensionInfo <> "\n\n" <> matrixInfo <>
-             "\n\ncosts = " <> show state.costs <>
-             "\n\nbounds = " <> show state.bounds
-    
-  dimensionInfo =
-    "Problem has " <> show (numVariables state) <> " variables and "
-    <> show (numConstraints state) <> " constraints."
-
-  matrixInfo =
-    fromMaybe "(no matrix)" $
-      parseEntries state.coefficients >>= makeMatrix prettyPrint
 
 intersperse :: forall a. a -> Array a -> Array a
 intersperse x = intercalate [x] <<< map pure
